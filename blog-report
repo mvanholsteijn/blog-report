@@ -1,4 +1,18 @@
 #!/usr/bin/python
+#
+#  Copyright 2015 Xebia Nederland B.V.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+# http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import feedparser
 import datetime
 import urllib
@@ -94,10 +108,10 @@ class BlogReporter:
 	def main(self):
 		now = datetime.datetime.now()
 		parser = OptionParser()
-		parser.add_option("-m", "--month", type="int", dest="month", help="month to report on")
-		parser.add_option("-y", "--year", type="int", dest="year", help="year to report on, default current", default=now.year)
 		parser.add_option("-u", "--url", dest="url", help="URL to RSS feed, default %s " % self.url, default=self.url)
 		parser.add_option("-f", "--feedkey", dest="feedkey", help="Feedkey for  RSS feed")
+		parser.add_option("-m", "--month", type="int", dest="month", help="month to report on")
+		parser.add_option("-y", "--year", type="int", dest="year", help="year to report on, default current", default=now.year)
 		parser.add_option("-b", "--print-blogs", action="store_true", dest="do_print_blogs", default=False, help="output a blog table")
 		parser.add_option("-a", "--print-authors", action="store_true", dest="do_print_authors", default=False, help="output an author count")
 		parser.add_option("-s", "--print-story", action="store_true", dest="do_print_story", default=False, help="print a story")
