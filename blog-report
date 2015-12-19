@@ -1,0 +1,130 @@
+#!/usr/bin/python
+import feedparser
+import datetime
+import urllib
+import calendar
+from optparse import OptionParser, Option
+
+class BlogReporter:
+	def __init__(self):
+		self.url = 'http://blog.xebia.com/feed/'
+		self.page = 1
+		self.page_size = 50
+		self.entries = []
+		self.authors = {}
+		self.year = 2015
+		self.month = None
+		self.eof = False
+		self.more = True
+		self.url_parameters = { 'paged' : self.page, 'size': self.page_size }
+	
+	def matching_entry(self, entry):
+		return entry.published_parsed.tm_year == self.year and (self.month == None or entry.published_parsed.tm_mon  == self.month)
+
+	def add_entry(self, entry):
+		self.entries.extend([entry])
+		self.authors[entry.author] = self.authors[entry.author] + 1 if entry.author in self.authors else 1
+
+	def set_more(self, entry):
+		""" Determine whether there are more entries to come """
+		self.more = (entry.published_parsed.tm_year >= self.year and (self.month == None or 
+				entry.published_parsed.tm_year != self.year or entry.published_parsed.tm_mon  >= self.month))
+
+	def get_page(self):
+		self.url_parameters['paged'] = self.page
+		self.url_parameters['size'] = self.page_size
+		url = "%s?%s" % (self.url, urllib.urlencode(self.url_parameters))
+		feed = feedparser.parse(url)
+		self.eof = len(feed.entries) == 0
+		if not self.eof:
+			self.set_more(feed.entries[0])
+			filtered = filter(lambda x: self.matching_entry(x), feed.entries)
+			for entry in filtered:
+				self.add_entry(entry)
+
+
+	def next_page(self):
+		self.page = self.page + 1
+		self.get_page()
+
+
+	def get_all(self):
+		self.get_page()
+		while not self.eof and self.more:
+			self.next_page()
+			
+
+	def print_authors(self):
+		for author in self.authors:
+			print "%s	%d" % ( author, self.authors[author])
+
+	def get_author_first_names(self):
+		return list(set(map(lambda x: x.split()[0], self.authors.keys())))
+
+	def get_multiple_authors(self):
+		return list(map(lambda x: "%s (%dx)" % (x, self.authors[x]), filter(lambda x: self.authors[x] > 1 , self.authors.keys())))
+
+	def print_blogs(self):
+		for entry in self.entries:
+			print "%d/%02d/%02d	%s	%s	%s" % (entry.published_parsed.tm_year, entry.published_parsed.tm_mon, entry.published_parsed.tm_mday, entry.author, entry.link, entry.title)
+
+	def comma_separated_and(self, strings):
+		result = ""
+		for string in range(len(strings)):
+			if string + 1 == len(strings) and string != 0:
+				result += " and "
+			elif string > 0:
+				result += ", "
+			result += strings[string]
+		return result
+
+	def print_story(self):
+		period = "%d" % self.year if self.month == None else calendar.month_name[self.month]
+		print "%d blogs were written in %s. Thanks to %s." % (len(self.entries), period, self.comma_separated_and(self.get_author_first_names()))
+		if len(self.get_multiple_authors()) > 0:
+			print "Special thanks to %s for writing multiple blogs in this period." %  self.comma_separated_and(self.get_multiple_authors())
+
+
+		print "<table><tr><th>author</th><th>blog</th></tr>"
+		for entry in self.entries:
+			print "<tr><td>%s</td><td><a href=\"%s\">%s</td></tr>" % ( entry.author, entry.link, entry.title)
+		print "</table>"
+
+
+	def main(self):
+		now = datetime.datetime.now()
+		parser = OptionParser()
+		parser.add_option("-m", "--month", type="int", dest="month", help="month to report on")
+		parser.add_option("-y", "--year", type="int", dest="year", help="year to report on, default current", default=now.year)
+		parser.add_option("-u", "--url", dest="url", help="URL to RSS feed, default %s " % self.url, default=self.url)
+		parser.add_option("-f", "--feedkey", dest="feedkey", help="Feedkey for  RSS feed")
+		parser.add_option("-b", "--print-blogs", action="store_true", dest="do_print_blogs", default=False, help="output a blog table")
+		parser.add_option("-a", "--print-authors", action="store_true", dest="do_print_authors", default=False, help="output an author count")
+		parser.add_option("-s", "--print-story", action="store_true", dest="do_print_story", default=False, help="print a story")
+		(options, args) = parser.parse_args()
+		self.year = options.year
+		if options.month:
+			self.month = options.month
+		if options.feedkey:
+			self.url_parameters['feedkey'] = options.feedkey
+		self.url = options.url 
+
+		if options.do_print_blogs:
+			self.get_all()
+			self.print_blogs()
+		elif options.do_print_authors:
+			self.get_all()
+			self.print_authors()
+		elif options.do_print_story:
+			self.get_all()
+			self.print_story()
+		else:
+		 	parser.print_help()
+
+
+def main():
+	report = BlogReporter()
+	report.main()
+
+if __name__ == "__main__":
+	    main()
